@@ -1,5 +1,12 @@
 # **Finding Lane Lines on the Road** 
 
+[image1]: ./test_images/whiteCarLaneSwitch.jpg "Our example image"
+[image2]: ./test_images_intermediate/blurred_whiteCarLaneSwitch.jpg "Grayscale with Gaussian noise"
+[image3]: ./test_images_intermediate/edges_whiteCarLaneSwitch.jpg "Canny edges"
+[image4]: ./test_images_intermediate/roi_whiteCarLaneSwitch.jpg "Region of interest"
+[image5]: ./test_images_intermediate/hough_lines_whiteCarLaneSwitch.jpg "Hough lines"
+[image6]: ./test_images_intermediate/final_whiteCarLaneSwitch.jpg "Lane lines overlaid on original image"
+
 ## Writeup
 
 ---
@@ -18,22 +25,27 @@ The essential structure of this lane line detector is a 6-stage pipeline into wh
 
 The first five of these steps are implemented using standard OpenCV library operations, in a similar manner to what was explored in previous lessons. The sixth step is implicit, and is included in the draw_lines function. Let's consider each of these steps in a little more detail. As we describe what they do and why, let's also see what they do with this example image:
 
-[image1]: ./test_images/whiteCarLaneSwitch.jpg "Our example image"
+![Our example image][image1]
 
 Canny finds edges using gradients over the two-dimensional image space - so it's necessary first to reduce three color dimensions to one. We achieve that by converting an input image frame to grayscale. If we ran Canny edge detection directly on this grayscale image we would find many spurious edges - individual pixels can be noisy. We add gaussian noise to the grayscale image as a sort of low pass filter: a larger number of pixels must then show an edge pattern for Canny to find an edge.
-[image2]: ./test_images_intermediate/blurred_whiteCarLaneSwitch.jpg "Grayscale with Gaussian noise"
+
+![Grayscale with Gaussian noise][image2]
 
 With this pre-processing complete, Canny edge detection is used to find a set of edges on the image:
-[image3]: ./test_images_intermediate/edges_whiteCarLaneSwitch.jpg "Canny edges"
+
+![Canny edges][image3]
 
 We have a particular context in mind: we are searching for lane markings on the road space ahead of a vehicle. We could simplify our search for lanes by focussing on those parts of the image where lanes ought to be: in the lower half, and closer to the centre as lane markings go off into the distance. The area of interest selection implements this idea: it selects only those edges in a quadrilateral area bounding the region where the lane ought to be.
-[image4]: ./test_images_intermediate/roi_whiteCarLaneSwitch.jpg "Region of interest"
+
+![Region of interest][image4]
 
 From a set of edges, we want to infer a set of lines. To do this we make use of Hough transforms: each edge in image space is mapped to a point in Hough Space; a large number of nearby points in Hough Space suggest the existence of a line comprising many of the detected edges.
-[image5]: ./test_images_intermediate/hough_lines_whiteCarLaneSwitch.jpg "Hough lines"
+
+![Hough lines][image5]
 
 After extracting a set of lines from our image, in a region where we would anticipate lane lines, we still have the question: which of these lines are in fact part of the lane lines? And what do the lane lines look like? To deal with this question, we create a simple lane line model (implicit in the draw_lines function). We assume that we will only see (at most) two lane lines: a left line and a right line. We filter each inferred line based on its gradient: negative gradients correspond to the left lane and positive gradients to the right lane (note: y values increase moving down the image, unlike with conventional Cartesian coordinates). For the left and right lane lines respectively, average gradients and offsets are calculated (crude, unweighted). These are then projected from the bottom of the picture towards the centre, and overlaid onto the original image marking inferred lane lines.
-[image6]: ./test_images_intermediate/final_whiteCarLaneSwitch.jpg "Lane lines overlaid on original image"
+
+![Lane lines overlaid on original image][image6]
 
 
 ### 2. Likely Shortcomings
