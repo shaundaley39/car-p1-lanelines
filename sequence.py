@@ -1,8 +1,8 @@
+import matplotlib.image as mpimg
 import numpy as np
 import cv2
 import math
 import os
-from moviepy.editor import VideoFileClip
 
 
 def grayscale(img):
@@ -72,7 +72,10 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     lcount, rcount, lgrad, rgrad, loffset, roffset = (0, 0, 0, 0, 0, 0)
     for line in lines:
         for x1, y1, x2, y2 in line:
-            grad = (x2-x1)/(y2-y1)
+            try:
+                grad = (x2-x1)/(y2-y1)
+            except (Exception):
+                pass
             offset = x1 - grad * y1
             if grad < -0.5 and grad > -3 and offset < 1000:
                 # left lane
@@ -139,14 +142,16 @@ def weighted_img(img, initial_img, α=0.8, β=1., γ=0.):
     return cv2.addWeighted(initial_img, α, img, β, γ)
 
 
-def process_image(image):
+def process_image(image, out_dir, image_name):
     img = grayscale(image)
 
     # gaussian blur - we care about image regions larger than individual pixels
     img = gaussian_blur(img, 5)
+    mpimg.imsave(out_dir + "blurred_" + image_name, img)
 
     # Canny transform - select only the points in the image with sufficiently high gradient (likely on edge)
     img = canny(img, 50, 150)
+    mpimg.imsave(out_dir + "edges_" + image_name, img)
 
     # mask - only a small part of the image should be processed for road lines
     imshape = img.shape
@@ -154,6 +159,7 @@ def process_image(image):
                           (0.55*imshape[1], 0.55*imshape[0]),
                           (imshape[1], imshape[0])]], dtype=np.int32)
     img = region_of_interest(img, vertices)
+    mpimg.imsave(out_dir + "roi_" + image_name, img)
 
     # hough transform and line extraction
     rho = 2
@@ -162,18 +168,16 @@ def process_image(image):
     min_line_len = 64
     max_line_gap = 128
     img = hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap)
+    mpimg.imsave(out_dir + "hough_lines_" + image_name, img)
 
     # overlay on original image
     img = weighted_img(img, image)
+    mpimg.imsave(out_dir + "final_" + image_name, img)
     return img
 
+test_dir = "test_images/"
+out_dir = "test_images_intermediate/"
 
-for f in ['solidWhiteRight.mp4', 'solidYellowLeft.mp4', 'challenge.mp4']:
-    inputf = "test_videos/"+f
-    outputf = "test_videos_output/"+f
-    clip = VideoFileClip(inputf)
-    try:
-        clip = clip.fl_image(process_image)
-        clip.write_videofile(outputf, audio=False)
-    except Exception:
-        pass
+for fname in os.listdir(test_dir):
+    in_img = mpimg.imread(test_dir + fname)
+    process_image(in_img, out_dir, fname)
